@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9c55295d01b2a070140dc439930372ba171ed75d7465c06ef1b895fa06a98515
+-- hash: ed5dc4c6c29cc5dc00f893e79f34949c357e2e8441355828cf809f18d7f29649
 
 name:           dice
 version:        0.1.0.0
@@ -36,6 +36,7 @@ library
       base >=4.7 && <5
     , parsec ==3.1.14.0
     , random ==1.1
+    , transformers ==0.5.6.2
   default-language: Haskell2010
 
 executable dice-exe
@@ -50,6 +51,7 @@ executable dice-exe
     , dice
     , parsec ==3.1.14.0
     , random ==1.1
+    , transformers ==0.5.6.2
   default-language: Haskell2010
 
 test-suite dice-test
@@ -65,4 +67,5 @@ test-suite dice-test
     , dice
     , parsec ==3.1.14.0
     , random ==1.1
+    , transformers ==0.5.6.2
   default-language: Haskell2010

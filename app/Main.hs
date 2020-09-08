@@ -22,7 +22,7 @@ run = do
      | otherwise                     -> process line >> run
 
 -- U+1F3B2
-prompt = "🎲> "
+prompt = "🎲>  "
 
 showHelp = putStrLn "todo..."
 
@@ -30,15 +30,11 @@ process :: String -> IO ()
 process line = do
   let parsed = parseLine "input" line
   case parsed of
-    Left e -> putStrLn (show e)
+    Left e -> print e
     Right p -> do
-      (ns,ss) <- unzip <$> mapM compute p
-      putStrLn ("total: " ++ (show $ sum ns))
-      putStrLn ("breakdown: " ++ intercalate "  +  " ss)
+      (a, w) <- evalLine p
+      putStrLn ("total: " ++ show a)
+      putStrLn ("breakdown: " ++ w)
 
-compute (Die n d) = do
-  gen <- newStdGen
-  let rs = take n $ rolls d gen
-  let str = concat [show n, show d, " (", intercalate ", " (map show rs), ")"]
-  return (sum rs, str)
-compute (Number n) = return (n, show n)
+instance MakesGen IO where
+  makeGen = newStdGen
