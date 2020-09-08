@@ -2,7 +2,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Lib where
+module Lib
+ ( parseLine
+ , evalLine
+ , MakesGen(..)
+ ) where
 
 import Prelude hiding (product)
 import Control.Monad.Trans.Class
