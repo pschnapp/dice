@@ -15,6 +15,7 @@ import Data.List
 import System.Random
 import Text.Parsec
 import Text.Parsec.Char
+import Text.Parsec.String
 
 
 -- parsing
@@ -25,10 +26,11 @@ parseLine = parse parser
 parser = do
   spaces
   expr <- compoundExpression
+  spaces
   eof
   return expr
 
-positiveDecimal :: Stream s m Char => ParsecT s u m Int
+positiveDecimal :: GenParser Char st Int
 positiveDecimal = do
   init <- oneOf ['1'..'9']
   num <- many digit
@@ -39,11 +41,11 @@ positiveDecimal = do
 
 type Recorder m = WriterT String m
 
-class (Monad m) => MakesGen m where
-  makeGen :: m StdGen
-
 class (Monad m) => Eval t m where
   eval :: t -> m Int
+
+class (Monad m) => MakesGen m where
+  makeGen :: m StdGen
 
 
 evalLine :: (MakesGen m) => CompoundExpression -> m (Int, String)
@@ -75,9 +77,21 @@ instance Show Die where
   show D100 = "d100"
 
 
+rangeFor D4   = (1, 4)
+rangeFor D6   = (1, 6)
+rangeFor D8   = (1, 8)
+rangeFor D10  = (1, 10)
+rangeFor D12  = (1, 12)
+rangeFor D20  = (1, 20)
+rangeFor D100 = (1, 100)
+
+rolls :: (MakesGen m) => Die -> m [Int]
+rolls d = randomRs (rangeFor d) <$> makeGen
+
+
 -- parsing
 
-die :: Stream s m Char => ParsecT s u m Die
+die :: GenParser Char st Die
 die = 
   try (dieNum "d100" D100)
   <|> try (dieNum "d20" D20)
@@ -87,21 +101,8 @@ die =
   <|> try (dieNum "d6" D6)
   <|> dieNum "d4" D4
 
-dieNum :: Stream s m Char => String -> Die -> ParsecT s u m Die
-dieNum s d = do
-  string s
-  return d
-
-
--- eval
-
-rangeFor D4   = (1, 4)
-rangeFor D6   = (1, 6)
-rangeFor D8   = (1, 8)
-rangeFor D10  = (1, 10)
-rangeFor D12  = (1, 12)
-rangeFor D20  = (1, 20)
-rangeFor D100 = (1, 100)
+dieNum :: String -> Die -> GenParser Char st Die
+dieNum s d = string s >> return d
 
 
 --------------------------------
@@ -127,23 +128,17 @@ instance (Monad m) => Eval NumericExpression (Recorder m) where
 
 -- parsing
 
-productExpression :: Stream s m Char => ParsecT s u m NumericExpression
+productExpression :: GenParser Char st NumericExpression
 productExpression =
   try (do
     num <- number
-    multiply
+    spaces >> char '*' >> spaces
     expr <- productExpression
     return (num `Product` expr))
   <|> number
 
-multiply :: Stream s m Char => ParsecT s u m ()
-multiply = char '*' >> spaces
-
-number :: Stream s m Char => ParsecT s u m NumericExpression
-number = do
-  n <- positiveDecimal
-  spaces
-  return (Number n)
+number :: GenParser Char st NumericExpression
+number = Number <$> positiveDecimal
 
 
 --------------------------------
@@ -163,34 +158,26 @@ instance (MakesGen m, Monad m) => Eval CompoundExpression (Recorder m) where
     tell "  +  "
     nr <- eval r
     return (nl + nr)
-  eval (Die i d) = do
-    g <- lift makeGen
-    let rs = take i $ randomRs (rangeFor d) g
-    tell (concat [show i, show d, " (", intercalate ", " (map show rs), ")"])
+  eval (Die n d) = do
+    rs <- take n <$> lift (rolls d)
+    tell (concat [show n, show d, " (", intercalate ", " (map show rs), ")"])
     return (sum rs)
   eval (NumericExpression e) = eval e
 
 
 -- parsing
 
-compoundExpression :: Stream s m Char => ParsecT s u m CompoundExpression
+compoundExpression :: GenParser Char st CompoundExpression
 compoundExpression =
   try (do
     num <- numbersOrDice
-    plus
+    spaces >> char '+' >> spaces
     expr <- compoundExpression
     return (num `Sum` expr))
   <|> numbersOrDice
 
-plus :: Stream s m Char => ParsecT s u m ()
-plus = char '+' >> spaces
-
-numbersOrDice :: Stream s m Char => ParsecT s u m CompoundExpression
+numbersOrDice :: GenParser Char st CompoundExpression
 numbersOrDice = try dice <|> (NumericExpression <$> productExpression)
 
-dice :: Stream s m Char => ParsecT s u m CompoundExpression
-dice = do
-  n <- option 1 positiveDecimal
-  d <- die
-  spaces
-  return (Die n d)
+dice :: GenParser Char st CompoundExpression
+dice = Die <$> option 1 positiveDecimal <*> die
