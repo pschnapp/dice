@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ed5dc4c6c29cc5dc00f893e79f34949c357e2e8441355828cf809f18d7f29649
+-- hash: c2189a54bbf0f99bcca7cafd8ce80c22d3d31ed62adb8f92cd2d8b4d63d8b54b
 
 name:           dice
 version:        0.1.0.0
@@ -34,6 +34,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , haskeline ==0.7.5.0
     , parsec ==3.1.14.0
     , random ==1.1
     , transformers ==0.5.6.2
@@ -49,6 +50,7 @@ executable dice-exe
   build-depends:
       base >=4.7 && <5
     , dice
+    , haskeline ==0.7.5.0
     , parsec ==3.1.14.0
     , random ==1.1
     , transformers ==0.5.6.2
@@ -65,6 +67,7 @@ test-suite dice-test
   build-depends:
       base >=4.7 && <5
     , dice
+    , haskeline ==0.7.5.0
     , parsec ==3.1.14.0
     , random ==1.1
     , transformers ==0.5.6.2
