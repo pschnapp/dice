@@ -50,7 +50,7 @@ showHelp = putStrLn "\
 \    6d8 + 7 * 3\n\
 \\n"
 
--- U+1F3B2
+-- U+1F3B2 🎲
 prompt = "{🎲}> "
 
 run :: InputT IO ()
