@@ -3,13 +3,11 @@
 
 module Internal.CompoundExpression where
 
-import Control.Monad.Trans.Class
 import Control.Monad.Trans.Writer
-import Data.List
 import Text.Parsec
 import Text.Parsec.String
 
-import Internal.Die
+import Internal.Dice
 import Internal.Eval
 import Internal.NumericExpression
 import Internal.Parsing
@@ -17,7 +15,7 @@ import Internal.Parsing
 
 data CompoundExpression
   = Sum CompoundExpression CompoundExpression
-  | Die Int Die
+  | DiceExpression Dice
   | NumericExpression NumericExpression
 
 instance (MakesGen m, Monad m) => Eval CompoundExpression (Recorder m) where
@@ -26,10 +24,7 @@ instance (MakesGen m, Monad m) => Eval CompoundExpression (Recorder m) where
     tell "  +  "
     nr <- eval r
     return (nl + nr)
-  eval (Die n d) = do
-    rs <- take n <$> lift (rolls d)
-    tell (concat [show n, show d, " (", intercalate ", " (map show rs), ")"])
-    return (sum rs)
+  eval (DiceExpression e) = eval e
   eval (NumericExpression e) = eval e
 
 
@@ -43,7 +38,6 @@ compoundExpression =
   <|> numbersOrDice
 
 numbersOrDice :: GenParser Char st CompoundExpression
-numbersOrDice = try dice <|> (NumericExpression <$> productExpression)
-
-dice :: GenParser Char st CompoundExpression
-dice = Die <$> option 1 positiveDecimal <*> die
+numbersOrDice =
+  try (DiceExpression <$> dice)
+  <|> (NumericExpression <$> productExpression)

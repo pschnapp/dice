@@ -8,9 +8,8 @@ import Control.Monad.Trans.Writer
 import Text.Parsec
 
 import Internal.CompoundExpression
-import Internal.Die
+import Internal.Dice
 import Internal.Eval
-import Internal.NumericExpression
 
 
 parseLine :: String -> String -> Either ParseError CompoundExpression

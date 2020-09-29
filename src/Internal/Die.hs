@@ -1,6 +1,5 @@
 module Internal.Die where
 
-import System.Random
 import Text.Parsec
 import Text.Parsec.String
 
@@ -34,9 +33,6 @@ rangeFor D10  = (1, 10)
 rangeFor D12  = (1, 12)
 rangeFor D20  = (1, 20)
 rangeFor D100 = (1, 100)
-
-rolls :: (MakesGen m) => Die -> m [Int]
-rolls d = randomRs (rangeFor d) <$> makeGen
 
 die :: GenParser Char st Die
 die = 
