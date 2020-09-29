@@ -5,7 +5,6 @@ module Main where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Data.List
 import Data.Maybe
 import Data.Text (pack, strip, unpack)
 import System.Console.Haskeline
@@ -26,7 +25,7 @@ main = do
     ["help"] -> showHelp
     ["h"]    -> showHelp
     [] -> runInputT defaultSettings run
-    _  -> runInputT defaultSettings $ process (intercalate " " args)
+    _  -> runInputT defaultSettings $ process (unwords args)
 
 showHelp :: IO ()
 showHelp = putStrLn "\
