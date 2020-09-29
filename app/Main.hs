@@ -61,14 +61,16 @@ run = do
   line <- unpack . strip . pack . fromMaybe "" <$> getInputLine prompt
   if | elem line quitInputs -> return ()
      | elem line helpInputs -> liftIO showHelp >> run
-     | null line             -> run
-     | otherwise             -> process line >> run
+     | null line            -> run
+     | otherwise            -> process line >> run
 
 process :: String -> InputT IO ()
 process line = do
   let parsed = parseLine "input" line
   case parsed of
-    Left e -> liftIO (print e)
+    Left e -> do
+      liftIO (print e)
+      outputStrLn ("type one of the following for help: " ++ show helpInputs)
     Right p -> do
       (a, w) <- evalLine p
       outputStrLn ("total: " ++ show a)
