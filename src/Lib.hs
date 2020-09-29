@@ -24,9 +24,7 @@ parseLine :: String -> String -> Either ParseError CompoundExpression
 parseLine = parse parser
 
 parser = do
-  spaces
   expr <- compoundExpression
-  spaces
   eof
   return expr
 

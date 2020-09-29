@@ -7,6 +7,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.List
 import Data.Maybe
+import Data.Text (pack, strip, unpack)
 import System.Console.Haskeline
 import System.Environment
 import System.IO
@@ -30,7 +31,7 @@ main = do
 showHelp :: IO ()
 showHelp = putStrLn "\
 \\n\
-\type 'q' or 'quit' to quit.\n\
+\type 'q', 'quit', or 'exit' to quit.\n\
 \type 'h' or 'help' for help.\n\
 \\n\
 \This program will roll any of the standard D&D dice for you\n\
@@ -53,12 +54,16 @@ showHelp = putStrLn "\
 -- U+1F3B2 🎲
 prompt = "{🎲}> "
 
+quitInputs = ["quit", "q", "exit"]
+helpInputs = ["help", "h"]
+
 run :: InputT IO ()
 run = do
-  line <- fromMaybe "" <$> getInputLine prompt
-  if | line == "quit" || line == "q" -> return ()
-     | line == "help" || line == "h" -> liftIO showHelp >> run
-     | otherwise                     -> process line    >> run
+  line <- unpack . strip . pack . fromMaybe "" <$> getInputLine prompt
+  if | elem line quitInputs -> return ()
+     | elem line helpInputs -> liftIO showHelp >> run
+     | null line             -> run
+     | otherwise             -> process line >> run
 
 process :: String -> InputT IO ()
 process line = do

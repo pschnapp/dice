@@ -24,6 +24,7 @@ dependencies:
 - haskeline == 0.7.5.0
 - parsec == 3.1.14.0
 - random == 1.1
+- text == 1.2.4.0
 - transformers == 0.5.6.2
 
 library:
@@ -50,3 +51,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - dice
+    - hspec
+    - QuickCheck == 2.13.2
