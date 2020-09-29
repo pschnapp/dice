@@ -26,6 +26,5 @@ instance (MakesGen m, Monad m) => Eval Dice (Recorder m) where
     tell (concat [show n, show d, " (", intercalate ", " (map show rs), ")"])
     return (sum rs)
 
-
-dice :: GenParser Char st Dice
-dice = Dice <$> option 1 positiveDecimal <*> die
+instance ExpressionParser Dice where
+  parseExpr = Dice <$> option 1 positiveDecimal <*> parseExpr

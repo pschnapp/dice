@@ -26,16 +26,14 @@ instance (Monad m) => Eval NumericExpression (Recorder m) where
     tell (show i)
     return i
 
-
-productExpression :: GenParser Char st NumericExpression
-productExpression =
-  try (do
-    num <- number
-    spaces >> char '*' >> spaces
-    expr <- productExpression
-    return (num `Product` expr)
-  )
-  <|> number
-
-number :: GenParser Char st NumericExpression
-number = Number <$> positiveDecimal
+instance ExpressionParser NumericExpression where
+  parseExpr =
+    try (do
+      num <- number
+      spaces >> char '*' >> spaces
+      expr <- parseExpr
+      return (num `Product` expr)
+    )
+    <|> number
+    where
+      number = Number <$> positiveDecimal

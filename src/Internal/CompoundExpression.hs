@@ -27,17 +27,15 @@ instance (MakesGen m, Monad m) => Eval CompoundExpression (Recorder m) where
   eval (DiceExpression e) = eval e
   eval (NumericExpression e) = eval e
 
-
-compoundExpression :: GenParser Char st CompoundExpression
-compoundExpression =
-  try (do
-    nod <- numbersOrDice
-    spaces >> char '+' >> spaces
-    expr <- compoundExpression
-    return (nod `Sum` expr))
-  <|> numbersOrDice
-
-numbersOrDice :: GenParser Char st CompoundExpression
-numbersOrDice =
-  try (DiceExpression <$> dice)
-  <|> (NumericExpression <$> productExpression)
+instance ExpressionParser CompoundExpression where
+  parseExpr =
+    try (do
+      nod <- numbersOrDice
+      spaces >> char '+' >> spaces
+      expr <- parseExpr
+      return (nod `Sum` expr))
+    <|> numbersOrDice
+    where
+      numbersOrDice =
+        try (DiceExpression <$> parseExpr)
+        <|> (NumericExpression <$> parseExpr)
