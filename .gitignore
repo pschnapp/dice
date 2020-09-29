@@ -1,4 +1,5 @@
 .stack-work/
+*.cabal
 *~
 .DS_Store
 *.lock
