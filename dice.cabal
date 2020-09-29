@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d4e08ba9266d0a871242edaa1abe174c108bd160389302b32f8d08e2cf043f74
+-- hash: e5102263d671a8091a5cbf4715eb5ba0a5ad51919eff365ce97a355c94fa85d0
 
 name:           dice
 version:        0.1.0.0
@@ -27,6 +27,11 @@ source-repository head
 
 library
   exposed-modules:
+      Internal.CompoundExpression
+      Internal.Die
+      Internal.Eval
+      Internal.NumericExpression
+      Internal.Parsing
       Lib
   other-modules:
       Paths_dice
