@@ -1,10 +1,10 @@
 name:                dice
-version:             0.1.0.0
-github:              "githubuser/dice"
+version:             1.1.0.0
+github:              "pschnapp/dice"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2020 Author name here"
+author:              "Paul Schnapp"
+maintainer:          "paul.schnapp@gmail.com"
+copyright:           "2021 Paul Schnapp"
 
 extra-source-files:
 - README.md
@@ -17,11 +17,13 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/dice#readme>
+description:         Please see the README on GitHub at <https://github.com/pschnapp/dice#readme>
 
 dependencies:
 - base >= 4.7 && < 5
+- either == 5.0.1.1
 - haskeline == 0.7.5.0
+- mtl == 2.2.2
 - parsec == 3.1.14.0
 - random == 1.1
 - text == 1.2.4.0
@@ -31,7 +33,7 @@ library:
   source-dirs: src
 
 executables:
-  dice-exe:
+  dice:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

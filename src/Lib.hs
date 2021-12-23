@@ -5,19 +5,16 @@ module Lib
  ) where
 
 import Control.Monad.Trans.Writer
+import Data.Either.Combinators
 import Text.Parsec
 
-import Internal.CompoundExpression
-import Internal.Dice
 import Internal.Eval
+import Internal.Expression
 import Internal.Parsing
 
 
-parseLine :: String -> String -> Either ParseError CompoundExpression
-parseLine = parse $ do
-  expr <- parseExpr
-  eof
-  return expr
+parseLine :: String -> String -> Either String Expression
+parseLine source = mapLeft show . parse lineParser source
 
-evalLine :: (MakesGen m) => CompoundExpression -> m (Int, String)
+evalLine :: (MakesGen m) => Expression -> m (Int, String)
 evalLine = runWriterT . eval

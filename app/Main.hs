@@ -30,30 +30,41 @@ main = do
 showHelp :: IO ()
 showHelp = putStrLn "\
 \\n\
-\type 'q', 'quit', or 'exit' to quit.\n\
+\type 'q', 'quit', 'e', or 'exit' to quit.\n\
 \type 'h' or 'help' for help.\n\
 \\n\
-\This program will roll any of the standard D&D dice for you\n\
-\(i.e. d4, d6, d8, d10, d12, d20, or d100) and lets you roll\n\
-\multiple dice at once, e.g.: 3d6\n\
+\This program is a calculator for rolling dice. It performs the\n\
+\following operations:\n\
 \\n\
-\You can also roll multiple dice of different types at once:\n\
+\     +  addition  (binary)\n\
+\     -  subtraction/negation  (binary/unary)\n\
+\     *  multiplication  (binary)\n\
+\     d  rolling a die  (binary/unary)\n\
+\    >d  rolling a die with advantage  (binary/unary)\n\
+\    <d  rolling a die with disadvantage  (binary/unary)\n\
 \\n\
-\    3d4 + 2d6\n\
+\For example:\n\
 \\n\
-\It also lets you add numeric constants (e.g. 7) and multiply\n\
-\numeric constants together (7 * 3) to modify your roll.\n\
+\    To roll for an attack with advantage and inspiration\n\
+\    (including an ability modifier and proficiency):\n\
 \\n\
-\Say you rolled three attacks which each gave 2d8 + 7 damage;\n\
-\you would type the damage in like so:\n\
+\        {🎲}>  >d20 + d4 + 5\n\
+\        total: 25\n\
+\        breakdown:  1 >d 20 (Σ[(19>11)]=19) + 1 d 4 (Σ[1]=1) + 5\n\
 \\n\
-\    6d8 + 7 * 3\n\
+\    Then to roll for damage if the attack succeeds:\n\
+\\n\
+\        {🎲}>  2d6 + 3\n\
+\        total: 11\n\
+\        breakdown:  2 d 6 (Σ[4,4]=8) + 3\n\
+\\n\
+\Parentheses can be used to denote sub-expressions.\n\
 \\n"
 
 -- U+1F3B2 🎲
-prompt = "{🎲}> "
+prompt = "{🎲}>  "
 
-quitInputs = ["quit", "q", "exit"]
+quitInputs = ["quit", "q", "exit", "e"]
 helpInputs = ["help", "h"]
 
 run :: InputT IO ()
@@ -65,11 +76,10 @@ run = do
      | otherwise            -> process line >> run
 
 process :: String -> InputT IO ()
-process line = do
-  let parsed = parseLine "input" line
-  case parsed of
+process line =
+  case parseLine "input" line of
     Left e -> do
-      liftIO (print e)
+      outputStrLn e
       outputStrLn ("type one of the following for help: " ++ show helpInputs)
     Right p -> do
       (a, w) <- evalLine p
