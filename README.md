@@ -13,15 +13,11 @@ disadvantage.
 
 The die-rolling operators are as follows:
 
-    +----------+------------------------+
-    | Operator | Operation              |
-    +----------+------------------------+
-    | `d`      | Roll normally          |
-    +----------+------------------------+
-    | `>d`     | Roll with advantage    |
-    +----------+------------------------+
-    | `<d`     | Roll with disadvantage |
-    +----------+------------------------+
+  | Operator | Operation              |
+  | -------: | ---------------------- |
+  | `d`      | Roll normally          |
+  | `>d`     | Roll with advantage    |
+  | `<d`     | Roll with disadvantage |
 
 These operators are used like this:
 
