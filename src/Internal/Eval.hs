@@ -75,8 +75,9 @@ dieOperation
   => RollType -> Int -> Int -> m Int
 dieOperation t n d = do
   (rs, shown) <- rolls (abs n) (abs d) t -- only use positive `n` and `d` here
-  let total = signum n * signum d * sum rs -- reapply sign of `n` and `d` for result
-  tell $ concat [" (Σ[", intercalate "," shown, "]=", show total, ")"] -- U+03A3 Σ
+  let total = signum n * signum d * sum rs -- reapply sign of `n` and `d` to result
+  let negSum = if total < 0 then "-" else ""
+  tell $ concat [" (", negSum,  "Σ[", intercalate "," shown, "]=", show total, ")"] -- U+03A3 Σ
   return total
 
 rolls :: (MakesGen m) => Int -> Int -> RollType -> m ([Int], [String])
