@@ -1,10 +1,10 @@
 name:                dice
-version:             1.1.0.0
+version:             1.2.0.0
 github:              "pschnapp/dice"
 license:             BSD3
 author:              "Paul Schnapp"
 maintainer:          "paul.schnapp@gmail.com"
-copyright:           "2021 Paul Schnapp"
+copyright:           "2022 Paul Schnapp"
 
 extra-source-files:
 - README.md

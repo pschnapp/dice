@@ -1,8 +1,11 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Internal.Parsing where
+module Internal.Parsing
+ ( lineParser
+ ) where
 
+import Data.Functor.Identity
 import Text.Parsec
 import Text.Parsec.String
 
@@ -23,6 +26,7 @@ instance HasAssociativity BinaryOperator where
   associativityOf BinaryDieWithDisadvantage = LeftAssociative
   associativityOf Multiplication = LeftAssociative
   associativityOf Subtraction = LeftAssociative
+  associativityOf Times = RightAssociative
 
 
 
@@ -30,12 +34,13 @@ class HasPrecedence a where
   precedenceOf :: a -> Word
 
 instance HasPrecedence BinaryOperator where
-  precedenceOf Addition = 0
+  precedenceOf Addition = 1
   precedenceOf BinaryDie = 3
   precedenceOf BinaryDieWithAdvantage = 3
   precedenceOf BinaryDieWithDisadvantage = 3
-  precedenceOf Multiplication = 1
-  precedenceOf Subtraction = 0
+  precedenceOf Multiplication = 2
+  precedenceOf Subtraction = 1
+  precedenceOf Times = 0
 
 instance HasPrecedence UnaryOperator where
   precedenceOf Negation = 5
@@ -44,7 +49,7 @@ instance HasPrecedence UnaryOperator where
   precedenceOf UnaryDieWithDisadvantage = 4
 
 
-type ExpressionParser st = GenParser Char st Expression
+type ExpressionParser st = GenParser Char st IdentityExpression
 
 
 lineParser :: ExpressionParser st
@@ -64,7 +69,7 @@ expressionParser = expr 0
 expr :: Word -> ExpressionParser st
 expr prec = padded term >>= expr' prec
 
-expr' :: Word -> Expression -> ExpressionParser st
+expr' :: Word -> IdentityExpression -> ExpressionParser st
 expr' prec p = do
   b <- peek binaryOp -- don't consume it yet, since we might not use it
   case b of
@@ -75,7 +80,7 @@ expr' prec p = do
       pr <- expr case associativityOf op of
               LeftAssociative -> precedenceOf op + 1
               RightAssociative -> precedenceOf op
-      expr' prec (Binary op p pr)
+      expr' prec (Identity $ Binary op p pr)
 
 -- corresponds to `P` in the paper
 term :: ExpressionParser st
@@ -83,9 +88,9 @@ term =
   do
     op <- unaryOp
     e <- expr (precedenceOf op)
-    return (Unary op e)
-  <|> Expression <$> parens expressionParser
-  <|> Term <$> constant
+    return (Identity $ Unary op e)
+  <|> Identity . Expression <$> parens expressionParser
+  <|> Identity . Term <$> constant
 
 -- corresponds to `B` in the paper
 binaryOp = operatorFrom Addition

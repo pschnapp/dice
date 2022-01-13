@@ -1,6 +1,6 @@
 # dice
 
-This is a command-line dice calculator for use in D&D and such.
+This is a command-line dice calculator for use when playing D&D and such.
 
 It is written in Haskell using Stack for package management.
 
@@ -13,13 +13,24 @@ disadvantage.
 
 The die-rolling operators are as follows:
 
-  | Operator | Operation              |
-  | -------: | ---------------------- |
-  | `d`      | Roll normally          |
-  | `>d`     | Roll with advantage    |
-  | `<d`     | Roll with disadvantage |
+  | Operator | Operation                            |
+  | -------: | ------------------------------------ |
+  | `d`      | Roll normally                        |
+  | `>d`     | Roll with advantage                  |
+  | `<d`     | Roll with disadvantage               |
+  | `x`      | Run a roll expression multiple times |
 
-These operators are used like this:
+Parentheses can be used to denote sub-expressions.
+
+Notes on the `x` operator:
+
+ - This operator has the lowest precedence and will execute whole subexpressions
+   (such as `d20+4`) multiple times
+ - If used with numbers, it behaves like plain multiplication
+ - If used with die operations in both of its operands, it will also behave like plain multiplication
+
+
+### Some examples:
 
 Say you wanted to roll for an attack with advantage and inspiration
 (including an ability modifier and proficiency); you would type:
@@ -34,7 +45,11 @@ Then to roll for damage if the attack succeeds:
     total: 11
     breakdown:  2 d 6 (Σ[4,4]=8) + 3
 
-Parentheses can be used to denote sub-expressions.
+You can also do multiple attack rolls at once using the `x` operator:
+
+    {🎲}>  2 x d20+4
+    total: 25
+    breakdown:  {(2 x): [1 d 20 (Σ[14]=14) + 4]=18 + [1 d 20 (Σ[3]=3) + 4]=7}=25
 
 
 ## Installation
@@ -53,7 +68,10 @@ Now you can run the calculator with:
 
     dice
 
-Note: on Linux you might need to install `libtinfo-dev` as well to get it to work.
+Notes:
+
+ - On Linux you might need to install `libtinfo-dev` as well to get it to work.
+ - Windows terminal (`cmd`) doesn't seem to like to run the program, so you'll have to use some other shell to run it on Windows.
 
 
 ## Feature Wishlist

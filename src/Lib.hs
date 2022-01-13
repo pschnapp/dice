@@ -13,8 +13,8 @@ import Internal.Expression
 import Internal.Parsing
 
 
-parseLine :: String -> String -> Either String Expression
+parseLine :: String -> String -> Either String IdentityExpression
 parseLine source = mapLeft show . parse lineParser source
 
-evalLine :: (MakesGen m) => Expression -> m (Int, String)
+evalLine :: (MakesGen m) => IdentityExpression -> m (Int, String)
 evalLine = runWriterT . eval

@@ -1,7 +1,13 @@
 module Internal.Expression where
 
+import Data.Functor.Identity
+
 
 type Constant = Word
+
+
+class DieOp a where
+  isDieOp :: a -> Bool
 
 
 data BinaryOperator
@@ -11,6 +17,7 @@ data BinaryOperator
   | BinaryDieWithDisadvantage
   | Multiplication
   | Subtraction
+  | Times
   deriving (Enum)
 
 instance Show BinaryOperator where
@@ -20,6 +27,13 @@ instance Show BinaryOperator where
   show BinaryDieWithDisadvantage = "<d"
   show Multiplication = "*"
   show Subtraction = "-"
+  show Times = "x"
+
+instance DieOp BinaryOperator where
+  isDieOp BinaryDie = True
+  isDieOp BinaryDieWithAdvantage = True
+  isDieOp BinaryDieWithDisadvantage = True
+  isDieOp _ = False
 
 
 data UnaryOperator
@@ -35,15 +49,22 @@ instance Show UnaryOperator where
   show UnaryDieWithAdvantage = show BinaryDieWithAdvantage
   show UnaryDieWithDisadvantage = show BinaryDieWithDisadvantage
 
+instance DieOp UnaryOperator where
+  isDieOp UnaryDie = True
+  isDieOp UnaryDieWithAdvantage = True
+  isDieOp UnaryDieWithDisadvantage = True
+  isDieOp _ = False
 
-data Expression
-  = Binary BinaryOperator Expression Expression
-  | Unary UnaryOperator Expression
-  | Expression Expression
+
+data Expression w
+  = Binary BinaryOperator (w (Expression w)) (w (Expression w))
+  | Unary UnaryOperator (w (Expression w))
+  | Expression (w (Expression w))
   | Term Constant
 
-instance Show Expression where
-  show (Binary op l r) = concat [show l, " ", show op, " ", show r]
-  show (Unary op e) = show op ++ show e
-  show (Expression e) = concat ["(", show e, ")"]
-  show (Term const) = show const
+
+isTerm (Term _) = True
+isTerm _ = False
+
+
+type IdentityExpression = Identity (Expression Identity)

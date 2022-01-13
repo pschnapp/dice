@@ -42,6 +42,9 @@ showHelp = putStrLn "\
 \     d  rolling a die  (binary/unary)\n\
 \    >d  rolling a die with advantage  (binary/unary)\n\
 \    <d  rolling a die with disadvantage  (binary/unary)\n\
+\     x  run a roll expression multiple times  (binary)\n\
+\\n\
+\Parentheses can be used to denote sub-expressions.\n\
 \\n\
 \For example:\n\
 \\n\
@@ -58,7 +61,11 @@ showHelp = putStrLn "\
 \        total: 11\n\
 \        breakdown:  2 d 6 (Σ[4,4]=8) + 3\n\
 \\n\
-\Parentheses can be used to denote sub-expressions.\n\
+\    You can also do multiple attack rolls at once using the `x` operator:\n\
+\\n\
+\        {🎲}>  2 x d20+4\n\
+\        total: 25\n\
+\        breakdown:  {(2 x): [1 d 20 (Σ[14]=14) + 4]=18 + [1 d 20 (Σ[3]=3) + 4]=7}=25\n\
 \\n"
 
 -- U+1F3B2 🎲
