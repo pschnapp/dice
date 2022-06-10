@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Internal.Eval
  ( MakesGen(..)
@@ -19,42 +21,36 @@ import Internal.Expression
 -- Expression Tagging
 --------------------------------
 
-data DynamicsTag a
-  = Dynamic a
-  | Static a
+-- Die ops are tagged as Dynamic since they need to be re-run when part of
+-- a `Times` operator expression; this tagging propagates up the AST
 
-type UntaggedInner = Expression Identity
-type TaggedInner = Expression DynamicsTag
+data DynamicsTag a
+  = Dynamic { unwrap :: a }
+  | Static { unwrap :: a }
+
 type TaggedExpression = DynamicsTag (Expression DynamicsTag)
 
 
-unwrap :: TaggedExpression -> TaggedInner
-unwrap (Dynamic a) = a
-unwrap (Static  a) = a
-
-tagSubExprs :: UntaggedInner -> TaggedInner
-tagSubExprs e = unwrap $ tagSubExprs' e
-
-tagSubExprs' :: Expression Identity -> TaggedExpression
-tagSubExprs' (Binary op (Identity l) (Identity r))
- | isDieOp op = Dynamic (Binary op (tagSubExprs' l) (tagSubExprs' r))
+tag :: IdentityExpression -> TaggedExpression
+tag (Identity (Binary op l r))
+ | isDieOp op = Dynamic (Binary op (tag l) (tag r))
  | otherwise =
-  let tl = tagSubExprs' l; tr = tagSubExprs' r in case (tl, tr) of
+  let tl = tag l; tr = tag r in case (tl, tr) of
     (Dynamic _, Dynamic _) -> Dynamic (Binary op tl tr)
     (Dynamic _, Static  _) -> Dynamic (Binary op tl tr)
     (Static  _, Dynamic _) -> Dynamic (Binary op tl tr)
     (Static  _, Static  _) -> Static  (Binary op tl tr)
-tagSubExprs' (Unary op (Identity e))
- | isDieOp op = Dynamic (Unary op (tagSubExprs' e))
+tag (Identity (Unary op e))
+ | isDieOp op = Dynamic (Unary op (tag e))
  | otherwise =
-  let tagged = tagSubExprs' e in case tagged of
+  let tagged = tag e in case tagged of
     Dynamic _ -> Dynamic (Unary op tagged)
     Static  _ -> Static (Unary op tagged)
-tagSubExprs' (Expression (Identity e)) =
-  let tagged = tagSubExprs' e in case tagged of
+tag (Identity (Expression e)) =
+  let tagged = tag e in case tagged of
     Dynamic _ -> Dynamic (Expression tagged)
     Static  _ -> Static (Expression tagged)
-tagSubExprs' (Term c) = Static (Term c)
+tag (Identity (Term c)) = Static (Term c)
 
 
 --------------------------------
@@ -67,6 +63,10 @@ class (Monad m) => MakesGen m where
 instance (MakesGen m) => MakesGen (WriterT String m) where
   makeGen = lift makeGen
 
+-- type-class synonym
+class (MakesGen m, MonadWriter String m) => EvalM m where {}
+instance (MakesGen m, MonadWriter String m) => EvalM m where {}
+
 
 data RollType
   = Normal
@@ -74,101 +74,88 @@ data RollType
   | WithDisadvantage
 
 
-eval :: (MakesGen m, MonadWriter String m) => IdentityExpression -> m Int
-eval = eval' . tagSubExprs . runIdentity
+eval :: EvalM m => IdentityExpression -> m Int
+eval = doEval . tag
 
-eval' :: (MakesGen m, MonadWriter String m) => TaggedInner -> m Int
-eval' = \case
-  Binary op@Addition l r ->
-    evalBinaryOperation op (unwrap l) (unwrap r) (pureBinary (+))
-  Binary op@Subtraction l r ->
-    evalBinaryOperation op (unwrap l) (unwrap r) (pureBinary (-))
-  Binary op@Multiplication l r ->
-    evalBinaryOperation op (unwrap l) (unwrap r) (pureBinary (*))
-  Binary op@BinaryDie l r ->
-    evalBinaryOperation op (unwrap l) (unwrap r) (dieOperation Normal)
-  Binary op@BinaryDieWithAdvantage l r ->
-    evalBinaryOperation op (unwrap l) (unwrap r) (dieOperation WithAdvantage)
-  Binary op@BinaryDieWithDisadvantage l r ->
-    evalBinaryOperation op (unwrap l) (unwrap r) (dieOperation WithDisadvantage)
-  Binary op@Times l r ->
-    evalTimesOperation l r
-  Unary Negation e -> do
-    tell "-"
-    ((-1)*) <$> eval' (unwrap e)
-  Unary UnaryDie e ->
-    evalBinaryOperation BinaryDie (Term 1) (unwrap e) (dieOperation Normal)
-  Unary UnaryDieWithAdvantage e ->
-    evalBinaryOperation BinaryDieWithAdvantage (Term 1) (unwrap e) (dieOperation WithAdvantage)
-  Unary UnaryDieWithDisadvantage e ->
-    evalBinaryOperation BinaryDieWithDisadvantage (Term 1) (unwrap e) (dieOperation WithDisadvantage)
-  Expression e -> do
-    tell "("
-    v <- eval' (unwrap e)
-    tell ")"
-    return v
-  Term c -> do
-    tell (show c)
-    return (fromIntegral c)
+doEval :: EvalM m => TaggedExpression -> m Int
+doEval te =
+  case unwrap te of
+    Binary op@Times l r ->
+      evalTimesOperation l r
+    Binary op l r ->
+      evalBinaryOperation op l r
+    Unary Negation e -> do
+      tell "-"
+      ((-1)*) <$> doEval e
+    Unary UnaryDie e ->
+      evalBinaryOperation BinaryDie (Static $ Term 1) e
+    Unary UnaryDieWithAdvantage e ->
+      evalBinaryOperation BinaryDieWithAdvantage (Static $ Term 1) e
+    Unary UnaryDieWithDisadvantage e ->
+      evalBinaryOperation BinaryDieWithDisadvantage (Static $ Term 1) e
+    Expression e -> do
+      tell "("
+      v <- doEval e
+      tell ")"
+      return v
+    Term c -> do
+      tell (show c)
+      return (fromIntegral c)
 
-evalBinaryOperation
-  :: (MakesGen m, MonadWriter String m)
-  => BinaryOperator -> TaggedInner -> TaggedInner -> (Int -> Int -> m Int) -> m Int
-evalBinaryOperation op l r doOp = do
-  vl <- eval' l
+evalBinaryOperation :: EvalM m => BinaryOperator -> TaggedExpression -> TaggedExpression -> m Int
+evalBinaryOperation op l r = do
+  vl <- doEval l
   tell $ concat [" ", show op, " "]
-  vr <- eval' r
-  doOp vl vr
+  vr <- doEval r
+  runBinaryOp op vl vr
 
-evalTimesOperation
-  :: (MakesGen m, MonadWriter String m)
-  => TaggedExpression -> TaggedExpression -> m Int
-evalTimesOperation (Dynamic l) (Dynamic r) =
-  evalBinaryOperation Times l r (pureBinary (*))
-evalTimesOperation (Dynamic d) (Static  s) =
-  evalTimesOperation' s d
-evalTimesOperation (Static  s) (Dynamic d) =
-  evalTimesOperation' s d
-evalTimesOperation (Static  l) (Static  r) =
-  evalBinaryOperation Times l r (pureBinary (*))
+evalTimesOperation :: EvalM m => TaggedExpression -> TaggedExpression -> m Int
+evalTimesOperation l@Dynamic{} r@Dynamic{} = evalBinaryOperation Times l r
+evalTimesOperation d@Dynamic{} s@Static{}  = evalTimesOperation' s d
+evalTimesOperation s@Static{}  d@Dynamic{} = evalTimesOperation' s d
+evalTimesOperation l@Static{}  r@Static{}  = evalBinaryOperation Times l r
 
-evalTimesOperation'
-  :: (MakesGen m, MonadWriter String m)
-  => TaggedInner -> TaggedInner -> m Int
+evalTimesOperation' :: EvalM m => TaggedExpression -> TaggedExpression -> m Int
 evalTimesOperation' s d = do
   tell "{("
-  n <- eval' s
-  if isTerm s
+  n <- doEval s
+  if isTerm (unwrap s)
   then tell $ concat [" ", show Times, "): "]
   else tell $ concat [" = ", show n, " ", show Times, "): "]
   v <- (signum n *) <$> runTimes (abs n) d -- hide sign of num then reapply
   tell $ concat ["}=", show v]
   return v
 
-runTimes
-  :: (MakesGen m, MonadWriter String m)
-  => Int -> TaggedInner -> m Int
+runTimes :: EvalM m => Int -> TaggedExpression -> m Int
 runTimes n e = do
   let es = replicate n (evalShowingResult e)
   let es' = intersperse showPlus es
   sum <$> sequence es'
 
-evalShowingResult :: (MakesGen m, MonadWriter String m) => TaggedInner -> m Int
+evalShowingResult :: EvalM m => TaggedExpression -> m Int
 evalShowingResult e = do
   tell "["
-  v <- eval' e
+  v <- doEval e
   tell $ concat ["]=", show v]
   return v
 
-showPlus :: (MakesGen m, MonadWriter String m) => m Int
+showPlus :: EvalM m => m Int
 showPlus = tell " + " >> return 0
+
+runBinaryOp :: EvalM m => BinaryOperator -> Int -> Int -> m Int
+runBinaryOp = \case
+  Addition -> pureBinary (+)
+  BinaryDie -> dieOperation Normal
+  BinaryDieWithAdvantage -> dieOperation WithAdvantage
+  BinaryDieWithDisadvantage -> dieOperation WithDisadvantage
+  Multiplication -> pureBinary (*)
+  Subtraction -> pureBinary (-)
+  Times -> pureBinary (*)
 
 pureBinary :: Monad m => (a -> a -> a) -> a -> a -> m a
 pureBinary op l r = return (l `op` r)
 
-dieOperation
-  :: (MakesGen m, MonadWriter String m)
-  => RollType -> Int -> Int -> m Int
+dieOperation :: EvalM m => RollType -> Int -> Int -> m Int
 dieOperation t n d = do
   (rs, shown) <- rolls (abs n) (abs d) t -- only use positive `n` and `d` here
   let total = signum n * signum d * sum rs -- reapply sign of `n` and `d` to get result
