@@ -80,10 +80,9 @@ eval = doEval . tag
 doEval :: EvalM m => TaggedExpression -> m Int
 doEval te =
   case unwrap te of
-    Binary op@Times l r ->
-      evalTimesOperation l r
-    Binary op l r ->
-      evalBinaryOperation op l r
+    Binary Times d@Dynamic{} s@Static{} -> evalTimesOperation s d
+    Binary Times s@Static{} d@Dynamic{} -> evalTimesOperation s d
+    Binary op l r -> evalBinaryOperation op l r
     Unary Negation e -> do
       tell "-"
       ((-1)*) <$> doEval e
@@ -110,37 +109,27 @@ evalBinaryOperation op l r = do
   runBinaryOp op vl vr
 
 evalTimesOperation :: EvalM m => TaggedExpression -> TaggedExpression -> m Int
-evalTimesOperation l@Dynamic{} r@Dynamic{} = evalBinaryOperation Times l r
-evalTimesOperation d@Dynamic{} s@Static{}  = evalTimesOperation' s d
-evalTimesOperation s@Static{}  d@Dynamic{} = evalTimesOperation' s d
-evalTimesOperation l@Static{}  r@Static{}  = evalBinaryOperation Times l r
-
-evalTimesOperation' :: EvalM m => TaggedExpression -> TaggedExpression -> m Int
-evalTimesOperation' s d = do
+evalTimesOperation s d = do
   tell "{("
   n <- doEval s
   if isTerm (unwrap s)
   then tell $ concat [" ", show Times, "): "]
   else tell $ concat [" = ", show n, " ", show Times, "): "]
   v <- (signum n *) <$> runTimes (abs n) d -- hide sign of num then reapply
-  tell $ concat ["}=", show v]
+  tell ("}=" ++ show v)
   return v
 
 runTimes :: EvalM m => Int -> TaggedExpression -> m Int
-runTimes n e = do
-  let es = replicate n (evalShowingResult e)
-  let es' = intersperse showPlus es
-  sum <$> sequence es'
+runTimes n e =
+  sum <$> sequence (intersperse showPlus . replicate n $ evalShowingResult e)
+  where showPlus = tell " + " >> return 0
 
 evalShowingResult :: EvalM m => TaggedExpression -> m Int
 evalShowingResult e = do
   tell "["
   v <- doEval e
-  tell $ concat ["]=", show v]
+  tell ("]=" ++ show v)
   return v
-
-showPlus :: EvalM m => m Int
-showPlus = tell " + " >> return 0
 
 runBinaryOp :: EvalM m => BinaryOperator -> Int -> Int -> m Int
 runBinaryOp = \case
@@ -169,24 +158,16 @@ rolls n 0 = \_ -> return (replicate n 0, replicate n "0")
 rolls n d = \case
   Normal -> do
     rs <- doRolls
-    let shown = map show rs
-    return (rs, shown)
+    return (rs, map show rs)
   WithAdvantage -> do
     pairs <- rollPairs
-    let rs = snd $ unzip pairs
-    let shown = map showGT pairs
-    return (rs, shown)
+    return (map snd pairs, map showGT pairs)
   WithDisadvantage -> do
     pairs <- rollPairs
-    let rs = fst $ unzip pairs
-    let shown = map showLT pairs
-    return (rs, shown)
+    return (map fst pairs, map showLT pairs)
   where
     doRolls = take n . randomRs (1, d) <$> makeGen
-    rollPairs = do
-      rs1 <- doRolls
-      rs2 <- doRolls
-      return $ zipWith minMaxPair rs1 rs2
-    minMaxPair a b = (min a b, max a b)
+    orderPair a b = (min a b, max a b)
+    rollPairs = zipWith orderPair <$> doRolls <*> doRolls
     showLT (a, b) = concat ["(", show a, "<", show b, ")"]
     showGT (a, b) = concat ["(", show b, ">", show a, ")"]
